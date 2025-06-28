@@ -1,0 +1,177 @@
+%language "c++"
+%skeleton "lalr1.cc"
+%require "3.2"
+
+%locations          
+
+%defines "parser.hh"        
+%output  "parser.cc"    
+
+%define api.location.file "location.hh"
+
+%define api.namespace {Riser}
+
+%define api.parser.class {Parser}
+
+%define api.token.raw
+
+%define api.value.type variant
+
+
+%code requires
+{
+    #pragma once
+    #include <string>
+    #include <vector>
+    #include "lib/Object.cpp"
+
+    #include "lib/AST/AST.cpp"
+
+    namespace Riser
+    {
+        class Driver;
+        class Scanner;
+    }
+
+}
+
+%parse-param    { Riser::Scanner& scanner }
+%parse-param    { Riser::Driver& driver }
+
+%code
+{
+    #pragma once
+    #include "driver.cpp"
+    #include "scanner.h"
+    
+
+    #define yylex scanner.lex
+    
+    int Riser::Driver::parse(const char* filename)
+    {
+
+        std::ifstream input(filename);
+
+        Scanner scanner{};
+        scanner.switch_streams(input, std::cerr);
+
+        Parser parse(scanner, *this);
+
+        int result = parse();
+
+        return result;
+    }
+    
+    
+    std::map<std::string,IdData*> idMap;
+    
+    std::vector<int> intVars;
+    std::vector<std::string> stringVars;
+
+}
+
+
+
+
+%token <std::string> ID
+%token <int> NUM
+%token
+    MINUS "-"
+    EQUAL "="
+    PLUS "+"
+    STAR "*"
+    SLASH "/"
+    LPAREN "("
+    RPAREN ")"
+    SEMICOLON ";"
+    INT
+    STRING
+    PRINT
+    IF
+    ELSE
+    ELSE_IF
+    WHILE
+    FOR
+;
+
+%type <ASTNode*> program lines line assignment;
+%type <ASTNode*> declaration;
+%type <Type> type;
+%type <ASTExpression*> expression value;
+%type <ASTPrintStatement*> print_stmnt;
+%type <ASTId*> id;
+
+%start program
+
+%%
+program: lines { ((ASTCodeBlock*)$1)->run();}
+        ;
+
+lines:   /*NULL*/  { $$ = new ASTCodeBlock();}
+        | lines line { ((ASTCodeBlock*)$1)->lines.push_back((ASTCodeLine*)$2); $$ = $1; }
+        
+        ;
+
+line:   assignment  { $$ = $1; }
+        | declaration { $$ = $1; }
+        | print_stmnt { $$ = $1; }
+        ;
+
+
+declaration:    type ID ";" { $$ = new ASTDeclaration($1, $2);}
+
+type:   INT { $$ = Type::INT; }
+        | STRING { $$ = Type::STRING; }
+        ;
+
+assignment: ID "=" expression ";"
+        {
+            $$ = new ASTAssignment($1, $3);
+        }
+        ;
+
+
+expression: 
+        value { $$ = $1; } 
+        | expression "+" value  { $$ = new ASTExpression($1, Operator::PLUS, $3); }
+        | expression "-" value  { $$ = new ASTExpression($1, Operator::MINUS, $3); }
+        | expression "*" value  { $$ = new ASTExpression($1, Operator::STAR, $3); }
+        | expression "/" value  { $$ = new ASTExpression($1, Operator::SLASH, $3); }
+        ;
+        
+value: 
+        NUM { $$ =  new ASTExpression($1); }
+        | id { $$ = new ASTExpression($1); }
+        ;
+id:  
+        ID { $$ = new ASTId($1); }
+        ;
+
+        
+print_stmnt:
+        PRINT "(" expression ")" ";"
+        {
+            $$ = new ASTPrintStatement($3);
+        }
+        ;
+
+%%
+
+#include <iostream>
+
+void
+Riser::Parser::error(const location_type& l, const std::string& m)
+{
+    std::cerr << "filename" << ":" << l << ": " << m << "\n";
+}
+
+
+int main(int argc, char** argv)
+{
+    if (argc < 2) return 0;
+    
+    Riser::Driver drv{};
+    drv.parse(argv[1]);
+
+    return 0;
+}
