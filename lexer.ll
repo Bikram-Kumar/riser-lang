@@ -37,6 +37,8 @@ FORMAT_CHARS        [\t\r\n ]+
 "="         return Token::EQUAL;
 "("         return Token::LPAREN;
 ")"         return Token::RPAREN;
+"{"         return Token::LBRACE;
+"}"         return Token::RBRACE;
 ";"         return Token::SEMICOLON;
 
 "int"            return Token::INT;

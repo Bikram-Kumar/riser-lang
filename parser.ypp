@@ -83,6 +83,8 @@
     SLASH "/"
     LPAREN "("
     RPAREN ")"
+    LBRACE "{"
+    RBRACE "}"
     SEMICOLON ";"
     INT
     STRING
@@ -99,6 +101,8 @@
 %type <Type> type;
 %type <ASTExpression*> expression value;
 %type <ASTPrintStatement*> print_stmnt;
+%type <ASTIfStatement*> if_stmnt;
+%type <ASTWhileStatement*> while_stmnt;
 %type <ASTId*> id;
 
 %start program
@@ -115,6 +119,8 @@ lines:   /*NULL*/  { $$ = new ASTCodeBlock();}
 line:   assignment  { $$ = $1; }
         | declaration { $$ = $1; }
         | print_stmnt { $$ = $1; }
+        | if_stmnt { $$ = $1; }
+        | while_stmnt { $$ = $1; }
         ;
 
 
@@ -154,6 +160,23 @@ print_stmnt:
             $$ = new ASTPrintStatement($3);
         }
         ;
+        
+
+if_stmnt:
+        IF "(" expression ")" "{" lines "}" 
+        {
+            $$ = new ASTIfStatement($3, (ASTCodeBlock*)$6);
+        }
+        ;
+        
+        
+while_stmnt:
+        WHILE "(" expression ")" "{" lines "}" 
+        {
+            $$ = new ASTWhileStatement($3, (ASTCodeBlock*)$6);
+        }
+        ;
+        
 
 %%
 

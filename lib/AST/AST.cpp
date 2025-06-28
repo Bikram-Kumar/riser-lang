@@ -58,7 +58,6 @@ public:
     
     virtual void run() override {
         for (ASTCodeLine* line: lines) {
-            std::cout << "running\n";
             line->run();
         }
     }
@@ -177,8 +176,7 @@ public:
                 break;
         }
         
-        delete lhs; delete rhs;
-        
+
     }
     
     ~ASTExpression() {
@@ -240,7 +238,6 @@ public:
                 stringVars[idData->index] = ((String*)expr->value)->val;
                 break;
             case Type::INT :
-                std::cout << "reassigned " << id << intVars[idData->index] << std::endl;
                 intVars[idData->index] = ((Integer*)expr->value)->val;
                 break;
         }
@@ -286,6 +283,7 @@ public:
     }
     
     virtual void run() override {
+        condition->run();
         if (condition->type == Type::INT && ((Integer*)condition->value)->val) {
             block->run();
         }
@@ -304,6 +302,29 @@ public:
 
 class ASTWhileStatement : public ASTNode {
 public:
+    ASTExpression* condition;
+    ASTCodeBlock* block;
+    
+    ASTWhileStatement(ASTExpression* condition, ASTCodeBlock* block) : condition(condition), block(block) {
+        
+    }
+    
+    virtual void run() override {
+        condition->run();
+        if (condition->type != Type::INT) {
+            std::cerr << "Invalid condition\n";
+            return;
+        }
+        
+        while (((Integer*)condition->value)->val) {
+            block->run();
+            condition->run();
+        }
+    }
+    
+    ~ASTWhileStatement() {
+        delete block; delete condition;
+    }
     
 };
 
